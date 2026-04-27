@@ -45,13 +45,12 @@ public class MainApp extends Application {
         menu.setPadding(new Insets(10));
         menu.setAlignment(Pos.CENTER);
         menu.setPrefWidth(150);
-
         menu.setStyle("-fx-background-color: linear-gradient(to bottom, #2c3e50, #34495e);");
 
         BorderPane root = new BorderPane(mainPane, null, null, null, menu);
         Scene scene = new Scene(root, width + 150, height);
 
-        primaryStage.setTitle("Workspace");
+        primaryStage.setTitle("Рабочее окно");
         primaryStage.setScene(scene);
         primaryStage.setX(100);
         primaryStage.setY(100);
@@ -61,31 +60,24 @@ public class MainApp extends Application {
         secondPane.setPrefSize(width, height);
         Scene scene2 = new Scene(secondPane, width, height);
 
-        secondStage.setTitle("Preview");
+        secondStage.setTitle("Второе окно");
         secondStage.setScene(scene2);
-
         secondStage.setX(primaryStage.getX() + width + 180);
         secondStage.setY(primaryStage.getY());
 
-        // 💀 Закрытие обоих окон
-        primaryStage.setOnCloseRequest(e -> {
-            secondStage.close();
-        });
-
-        secondStage.setOnCloseRequest(e -> {
-            primaryStage.close();
-        });
+        primaryStage.setOnCloseRequest(e -> secondStage.close());
+        secondStage.setOnCloseRequest(e -> primaryStage.close());
 
         setupDrop(mainPane);
         setupDrop(secondPane);
 
-        Button start = new Button("▶");
-        Button stop = new Button("⏸");
-        Button mode = new Button("Mode");
-        Button clear = new Button("Clear");
+        Button start = new Button("Начать движение");
+        Button stop = new Button("Остановить");
+        Button mode = new Button("Сменить режим");
+        Button clear = new Button("Очистить");
 
         for (Button b : List.of(start, stop, mode, clear)) {
-            b.setPrefSize(120, 35);
+            b.setPrefSize(130, 35);
             b.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 8;");
         }
 
@@ -99,9 +91,9 @@ public class MainApp extends Application {
 
         menu.getChildren().addAll(shapesBox, start, stop, mode, clear);
 
-        circleBtn.setOnAction(e -> addShape(createCircle(circleBtn)));
-        rectBtn.setOnAction(e -> addShape(createRect(rectBtn)));
-        triangleBtn.setOnAction(e -> addShape(createTriangle(triangleBtn)));
+        circleBtn.setOnAction(e -> addShape(createCircle()));
+        rectBtn.setOnAction(e -> addShape(createRect()));
+        triangleBtn.setOnAction(e -> addShape(createTriangle()));
 
         start.setOnAction(e -> timer.start());
         stop.setOnAction(e -> timer.stop());
@@ -134,42 +126,48 @@ public class MainApp extends Application {
 
     private Button createShapeButton(String type) {
         Button btn = new Button();
-        Color c = randomColor();
-        btn.setUserData(c);
-        btn.setGraphic(createIcon(type, c));
+        btn.setGraphic(createIcon(type));
         return btn;
     }
 
-    private Shape createIcon(String type, Color c) {
-        if ("circle".equals(type)) return new Circle(8, c);
+    private Shape createIcon(String type) {
+        if ("circle".equals(type)) return new Circle(8, randomColor());
 
         if ("triangle".equals(type)) {
             Polygon t = new Polygon(8, 0, 16, 16, 0, 16);
-            t.setFill(c);
+            t.setFill(randomColor());
             return t;
         }
 
         Rectangle r = new Rectangle(16, 16);
-        r.setFill(c);
+        r.setFill(randomColor());
         return r;
     }
 
-    private Circle createCircle(Button btn) {
-        Circle c = new Circle(15 + Math.random() * 20, randomColor());
-        c.setLayoutX(Math.random() * mainPane.getWidth());
-        c.setLayoutY(Math.random() * mainPane.getHeight());
+    private Circle createCircle() {
+        double r = 15 + Math.random() * 20;
+        Circle c = new Circle(r, randomColor());
+
+        c.setLayoutX(r + Math.random() * (mainPane.getWidth() - 2 * r));
+        c.setLayoutY(r + Math.random() * (mainPane.getHeight() - 2 * r));
+
         return c;
     }
 
-    private Rectangle createRect(Button btn) {
-        Rectangle r = new Rectangle(30 + Math.random() * 20, 30 + Math.random() * 20);
+    private Rectangle createRect() {
+        double w = 30 + Math.random() * 20;
+        double h = 30 + Math.random() * 20;
+
+        Rectangle r = new Rectangle(w, h);
         r.setFill(randomColor());
-        r.setLayoutX(Math.random() * mainPane.getWidth());
-        r.setLayoutY(Math.random() * mainPane.getHeight());
+
+        r.setLayoutX(Math.random() * (mainPane.getWidth() - w));
+        r.setLayoutY(Math.random() * (mainPane.getHeight() - h));
+
         return r;
     }
 
-    private Polygon createTriangle(Button btn) {
+    private Polygon createTriangle() {
         double size = 30 + Math.random() * 20;
 
         Polygon t = new Polygon(
@@ -179,15 +177,19 @@ public class MainApp extends Application {
         );
 
         t.setFill(randomColor());
-        t.setLayoutX(Math.random() * mainPane.getWidth());
-        t.setLayoutY(Math.random() * mainPane.getHeight());
+
+        t.setLayoutX(Math.random() * (mainPane.getWidth() - size));
+        t.setLayoutY(Math.random() * (mainPane.getHeight() - size));
+
         return t;
     }
 
     private void addShape(Shape s) {
+        s.setBlendMode(modes[modeIndex]);
         shapes.add(new MovingShape(s));
         mainPane.getChildren().add(s);
         enableDrag(s);
+        addContextMenu(s);
     }
 
     // ===== MOVEMENT =====
@@ -205,50 +207,34 @@ public class MainApp extends Application {
             double x = shape.getLayoutX();
             double y = shape.getLayoutY();
 
-            double nextX = x + dx;
-            double nextY = y + dy;
+            Bounds b = shape.getBoundsInParent();
 
-            if (shape instanceof Circle) {
-                Circle c = (Circle) shape;
-                double r = c.getRadius();
-
-                if (nextX - r <= 0 || nextX + r >= bounds.getWidth()) {
-                    dx *= -1;
-                }
-
-                if (nextY - r <= 0 || nextY + r >= bounds.getHeight()) {
-                    dy *= -1;
-                }
-
-            } else if (shape instanceof Rectangle) {
-                Rectangle r = (Rectangle) shape;
-
-                if (nextX <= 0 || nextX + r.getWidth() >= bounds.getWidth()) {
-                    dx *= -1;
-                }
-
-                if (nextY <= 0 || nextY + r.getHeight() >= bounds.getHeight()) {
-                    dy *= -1;
-                }
-
-            } else if (shape instanceof Polygon) {
-                Bounds b = shape.getBoundsInParent();
-
-                if (b.getMinX() <= 0 || b.getMaxX() >= bounds.getWidth()) {
-                    dx *= -1;
-                }
-
-                if (b.getMinY() <= 0 || b.getMaxY() >= bounds.getHeight()) {
-                    dy *= -1;
-                }
-            }
+            if (b.getMinX() <= 0 || b.getMaxX() >= bounds.getWidth()) dx *= -1;
+            if (b.getMinY() <= 0 || b.getMaxY() >= bounds.getHeight()) dy *= -1;
 
             shape.setLayoutX(x + dx);
             shape.setLayoutY(y + dy);
         }
     }
 
-    // ===== DRAG =====
+    // ===== CONTEXT MENU =====
+
+    private void addContextMenu(Shape s) {
+        ContextMenu menu = new ContextMenu();
+        MenuItem delete = new MenuItem("Удалить");
+
+        delete.setOnAction(e -> {
+            ((Pane) s.getParent()).getChildren().remove(s);
+            shapes.removeIf(ms -> ms.shape == s);
+        });
+
+        menu.getItems().add(delete);
+
+        s.setOnContextMenuRequested(e ->
+                menu.show(s, e.getScreenX(), e.getScreenY()));
+    }
+
+    // ===== DRAG & DROP =====
 
     private void enableDrag(Shape s) {
 
@@ -262,8 +248,6 @@ public class MainApp extends Application {
             db.setDragView(s.snapshot(null, null));
 
             draggingShape = s;
-
-            // 💡 скрываем оригинал
             s.setVisible(false);
 
             e.consume();
@@ -285,19 +269,25 @@ public class MainApp extends Application {
 
             Pane sourcePane = (Pane) draggingShape.getParent();
 
-            // 👉 если в то же окно — просто перемещаем
-            if (sourcePane == targetPane) {
-                draggingShape.setLayoutX(e.getX());
-                draggingShape.setLayoutY(e.getY());
-                draggingShape.setVisible(true);
-            } else {
-                // 👉 перенос в другое окно
+            if (sourcePane != targetPane) {
                 sourcePane.getChildren().remove(draggingShape);
                 targetPane.getChildren().add(draggingShape);
+            }
 
-                draggingShape.setLayoutX(e.getX());
-                draggingShape.setLayoutY(e.getY());
-                draggingShape.setVisible(true);
+            draggingShape.setLayoutX(e.getX());
+            draggingShape.setLayoutY(e.getY());
+            draggingShape.setVisible(true);
+
+            if (targetPane == secondPane) {
+                shapes.removeIf(ms -> ms.shape == draggingShape);
+                draggingShape.setOnContextMenuRequested(null);
+                enableSecondWindowBehavior(draggingShape);
+            } else {
+                if (shapes.stream().noneMatch(ms -> ms.shape == draggingShape)) {
+                    shapes.add(new MovingShape(draggingShape));
+                }
+                enableDrag(draggingShape);
+                addContextMenu(draggingShape);
             }
 
             e.setDropCompleted(true);
@@ -306,8 +296,20 @@ public class MainApp extends Application {
         });
     }
 
+    // ===== SECOND WINDOW =====
+
+    private void enableSecondWindowBehavior(Shape s) {
+        s.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                secondPane.getChildren().remove(s);
+            } else if (e.getButton() == MouseButton.SECONDARY) {
+                s.setFill(randomColor());
+            }
+        });
+    }
+
     private Color randomColor() {
-        return Color.color(Math.random(), Math.random(), Math.random());
+        return Color.hsb(Math.random() * 360, 0.7, 0.9);
     }
 
     public static void main(String[] args) {
