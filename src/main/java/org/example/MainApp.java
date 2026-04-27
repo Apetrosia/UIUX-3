@@ -117,6 +117,7 @@ public class MainApp extends Application {
                 }
             }
         };
+        timer.start();
 
         primaryStage.show();
         secondStage.show();
