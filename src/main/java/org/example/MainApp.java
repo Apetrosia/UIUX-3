@@ -31,39 +31,28 @@ public class MainApp extends Application {
     private int modeIndex = 0;
 
     private Shape draggingShape;
-    private Point2D dragOffset;
-    private Point2D originalPos;
-
-    final boolean[] dndActive = {false};
-
-    private double savedDx;
-    private double savedDy;
-
-    private boolean dragged = false;
 
     @Override
     public void start(Stage primaryStage) {
 
-        double width = 600;
-        double height = 500;
+        double width = 450;
+        double height = 350;
 
         mainPane = new Pane();
         mainPane.setPrefSize(width, height);
 
-        VBox menu = new VBox(12);
-        menu.setPadding(new Insets(15));
+        VBox menu = new VBox(10);
+        menu.setPadding(new Insets(10));
         menu.setAlignment(Pos.CENTER);
-        menu.setPrefWidth(180);
+        menu.setPrefWidth(150);
 
         menu.setStyle("-fx-background-color: linear-gradient(to bottom, #2c3e50, #34495e);");
 
         BorderPane root = new BorderPane(mainPane, null, null, null, menu);
-        Scene scene = new Scene(root, width + 180, height);
+        Scene scene = new Scene(root, width + 150, height);
 
         primaryStage.setTitle("Workspace");
         primaryStage.setScene(scene);
-        primaryStage.setWidth(width + 180);
-        primaryStage.setHeight(height);
         primaryStage.setX(100);
         primaryStage.setY(100);
 
@@ -74,57 +63,52 @@ public class MainApp extends Application {
 
         secondStage.setTitle("Preview");
         secondStage.setScene(scene2);
-        secondStage.setWidth(width);
-        secondStage.setHeight(height);
-        secondStage.setX(primaryStage.getX() + primaryStage.getWidth() + 20);
+
+        secondStage.setX(primaryStage.getX() + width + 180);
         secondStage.setY(primaryStage.getY());
+
+        // 💀 Закрытие обоих окон
+        primaryStage.setOnCloseRequest(e -> {
+            secondStage.close();
+        });
+
+        secondStage.setOnCloseRequest(e -> {
+            primaryStage.close();
+        });
 
         setupDrop(mainPane);
         setupDrop(secondPane);
 
-        Button start = new Button("▶ Start");
-        Button stop = new Button("⏸ Stop");
-        Button mode = new Button("Blend Mode");
-        Button clear = new Button("Clear All");
+        Button start = new Button("▶");
+        Button stop = new Button("⏸");
+        Button mode = new Button("Mode");
+        Button clear = new Button("Clear");
 
         for (Button b : List.of(start, stop, mode, clear)) {
-            b.setPrefSize(160, 40);
-            b.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 10; -fx-font-weight: bold;");
+            b.setPrefSize(120, 35);
+            b.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 8;");
         }
 
         Button circleBtn = createShapeButton("circle");
         Button rectBtn = createShapeButton("rect");
         Button triangleBtn = createShapeButton("triangle");
 
-        HBox shapesBox = new HBox(10, circleBtn, rectBtn, triangleBtn);
+        HBox shapesBox = new HBox(8, circleBtn, rectBtn, triangleBtn);
         shapesBox.setAlignment(Pos.CENTER);
-        shapesBox.setStyle("-fx-background-color: #ffffff22; -fx-padding: 10; -fx-background-radius: 10;");
+        shapesBox.setStyle("-fx-background-color: #ffffff22; -fx-padding: 8; -fx-background-radius: 8;");
 
         menu.getChildren().addAll(shapesBox, start, stop, mode, clear);
 
-        circleBtn.setOnAction(e -> {
-            addShape(createCircle(circleBtn));
-            updateButton(circleBtn, "circle");
-        });
-
-        rectBtn.setOnAction(e -> {
-            addShape(createRect(rectBtn));
-            updateButton(rectBtn, "rect");
-        });
-
-        triangleBtn.setOnAction(e -> {
-            addShape(createTriangle(triangleBtn));
-            updateButton(triangleBtn, "triangle");
-        });
+        circleBtn.setOnAction(e -> addShape(createCircle(circleBtn)));
+        rectBtn.setOnAction(e -> addShape(createRect(rectBtn)));
+        triangleBtn.setOnAction(e -> addShape(createTriangle(triangleBtn)));
 
         start.setOnAction(e -> timer.start());
         stop.setOnAction(e -> timer.stop());
 
         mode.setOnAction(e -> {
             modeIndex = (modeIndex + 1) % modes.length;
-            for (MovingShape s : shapes) {
-                s.shape.setBlendMode(modes[modeIndex]);
-            }
+            shapes.forEach(s -> s.shape.setBlendMode(modes[modeIndex]));
         });
 
         clear.setOnAction(e -> {
@@ -156,55 +140,37 @@ public class MainApp extends Application {
         return btn;
     }
 
-    private void updateButton(Button btn, String type) {
-        Color c = randomColor();
-        btn.setUserData(c);
-        btn.setGraphic(createIcon(type, c));
-    }
-
     private Shape createIcon(String type, Color c) {
-        if ("circle".equals(type)) return new Circle(10, c);
+        if ("circle".equals(type)) return new Circle(8, c);
 
         if ("triangle".equals(type)) {
-            Polygon t = new Polygon(10, 0, 20, 20, 0, 20);
+            Polygon t = new Polygon(8, 0, 16, 16, 0, 16);
             t.setFill(c);
             return t;
         }
 
-        Rectangle r = new Rectangle(20, 20);
+        Rectangle r = new Rectangle(16, 16);
         r.setFill(c);
         return r;
     }
 
     private Circle createCircle(Button btn) {
-        Color c = (Color) btn.getUserData();
-        double r = 20 + Math.random() * 30;
-        Circle shape = new Circle(r, c);
-        shape.setBlendMode(modes[modeIndex]);
-
-        shape.setLayoutX(r + Math.random() * (mainPane.getWidth() - 2 * r));
-        shape.setLayoutY(r + Math.random() * (mainPane.getHeight() - 2 * r));
-        return shape;
+        Circle c = new Circle(15 + Math.random() * 20, randomColor());
+        c.setLayoutX(Math.random() * mainPane.getWidth());
+        c.setLayoutY(Math.random() * mainPane.getHeight());
+        return c;
     }
 
     private Rectangle createRect(Button btn) {
-        Color c = (Color) btn.getUserData();
-        double w = 40 + Math.random() * 40;
-        double h = 40 + Math.random() * 40;
-
-        Rectangle r = new Rectangle(w, h);
-        r.setFill(c);
-        r.setBlendMode(modes[modeIndex]);
-
-        r.setLayoutX(Math.random() * (mainPane.getWidth() - w));
-        r.setLayoutY(Math.random() * (mainPane.getHeight() - h));
+        Rectangle r = new Rectangle(30 + Math.random() * 20, 30 + Math.random() * 20);
+        r.setFill(randomColor());
+        r.setLayoutX(Math.random() * mainPane.getWidth());
+        r.setLayoutY(Math.random() * mainPane.getHeight());
         return r;
     }
 
     private Polygon createTriangle(Button btn) {
-        Color c = (Color) btn.getUserData();
-
-        double size = 30 + Math.random() * 40;
+        double size = 30 + Math.random() * 20;
 
         Polygon t = new Polygon(
                 0.0, size,
@@ -212,12 +178,9 @@ public class MainApp extends Application {
                 size, size
         );
 
-        t.setFill(c);
-        t.setBlendMode(modes[modeIndex]);
-
-        t.setLayoutX(Math.random() * (mainPane.getWidth() - size));
-        t.setLayoutY(Math.random() * (mainPane.getHeight() - size));
-
+        t.setFill(randomColor());
+        t.setLayoutX(Math.random() * mainPane.getWidth());
+        t.setLayoutY(Math.random() * mainPane.getHeight());
         return t;
     }
 
@@ -225,15 +188,14 @@ public class MainApp extends Application {
         shapes.add(new MovingShape(s));
         mainPane.getChildren().add(s);
         enableDrag(s);
-        addMenu(s);
     }
 
     // ===== MOVEMENT =====
 
     private static class MovingShape {
         Shape shape;
-        double dx = Math.random() * 4 - 2;
-        double dy = Math.random() * 4 - 2;
+        double dx = Math.random() * 3 - 1.5;
+        double dy = Math.random() * 3 - 1.5;
 
         MovingShape(Shape s) {
             shape = s;
@@ -243,32 +205,42 @@ public class MainApp extends Application {
             double x = shape.getLayoutX();
             double y = shape.getLayoutY();
 
+            double nextX = x + dx;
+            double nextY = y + dy;
+
             if (shape instanceof Circle) {
                 Circle c = (Circle) shape;
                 double r = c.getRadius();
 
-                if (x - r <= 0) dx = Math.abs(dx);
-                if (x + r >= bounds.getWidth()) dx = -Math.abs(dx);
+                if (nextX - r <= 0 || nextX + r >= bounds.getWidth()) {
+                    dx *= -1;
+                }
 
-                if (y - r <= 0) dy = Math.abs(dy);
-                if (y + r >= bounds.getHeight()) dy = -Math.abs(dy);
+                if (nextY - r <= 0 || nextY + r >= bounds.getHeight()) {
+                    dy *= -1;
+                }
 
             } else if (shape instanceof Rectangle) {
                 Rectangle r = (Rectangle) shape;
-                if (x <= 0) dx = Math.abs(dx);
-                if (x + r.getWidth() >= bounds.getWidth()) dx = -Math.abs(dx);
 
-                if (y <= 0) dy = Math.abs(dy);
-                if (y + r.getHeight() >= bounds.getHeight()) dy = -Math.abs(dy);
+                if (nextX <= 0 || nextX + r.getWidth() >= bounds.getWidth()) {
+                    dx *= -1;
+                }
+
+                if (nextY <= 0 || nextY + r.getHeight() >= bounds.getHeight()) {
+                    dy *= -1;
+                }
 
             } else if (shape instanceof Polygon) {
                 Bounds b = shape.getBoundsInParent();
 
-                if (b.getMinX() <= 0) dx = Math.abs(dx);
-                if (b.getMaxX() >= bounds.getWidth()) dx = -Math.abs(dx);
+                if (b.getMinX() <= 0 || b.getMaxX() >= bounds.getWidth()) {
+                    dx *= -1;
+                }
 
-                if (b.getMinY() <= 0) dy = Math.abs(dy);
-                if (b.getMaxY() >= bounds.getHeight()) dy = -Math.abs(dy);
+                if (b.getMinY() <= 0 || b.getMaxY() >= bounds.getHeight()) {
+                    dy *= -1;
+                }
             }
 
             shape.setLayoutX(x + dx);
@@ -276,24 +248,7 @@ public class MainApp extends Application {
         }
     }
 
-    // ===== CONTEXT MENU =====
-
-    private void addMenu(Shape s) {
-        ContextMenu m = new ContextMenu();
-        MenuItem del = new MenuItem("Удалить");
-
-        del.setOnAction(e -> {
-            ((Pane) s.getParent()).getChildren().remove(s);
-            shapes.removeIf(sh -> sh.shape == s);
-        });
-
-        m.getItems().add(del);
-
-        s.setOnContextMenuRequested(e ->
-                m.show(s, e.getScreenX(), e.getScreenY()));
-    }
-
-    // ===== DRAG & DROP =====
+    // ===== DRAG =====
 
     private void enableDrag(Shape s) {
 
@@ -301,15 +256,16 @@ public class MainApp extends Application {
             Dragboard db = s.startDragAndDrop(TransferMode.MOVE);
 
             ClipboardContent content = new ClipboardContent();
-
-            if (s instanceof Circle) content.putString("circle");
-            else if (s instanceof Rectangle) content.putString("rect");
-            else content.putString("triangle");
-
+            content.putString("shape");
             db.setContent(content);
+
             db.setDragView(s.snapshot(null, null));
 
             draggingShape = s;
+
+            // 💡 скрываем оригинал
+            s.setVisible(false);
+
             e.consume();
         });
     }
@@ -317,7 +273,7 @@ public class MainApp extends Application {
     private void setupDrop(Pane targetPane) {
 
         targetPane.setOnDragOver(e -> {
-            if (e.getGestureSource() != targetPane && e.getDragboard().hasString()) {
+            if (e.getDragboard().hasString()) {
                 e.acceptTransferModes(TransferMode.MOVE);
             }
             e.consume();
@@ -325,55 +281,28 @@ public class MainApp extends Application {
 
         targetPane.setOnDragDropped(e -> {
 
-            Dragboard db = e.getDragboard();
-            if (!db.hasString()) return;
+            if (draggingShape == null) return;
 
-            Shape newShape;
+            Pane sourcePane = (Pane) draggingShape.getParent();
 
-            if ("circle".equals(db.getString())) {
-                Circle c = (Circle) draggingShape;
-                newShape = new Circle(c.getRadius(), c.getFill());
-            } else if ("rect".equals(db.getString())) {
-                Rectangle r = (Rectangle) draggingShape;
-                Rectangle copy = new Rectangle(r.getWidth(), r.getHeight());
-                copy.setFill(r.getFill());
-                newShape = copy;
+            // 👉 если в то же окно — просто перемещаем
+            if (sourcePane == targetPane) {
+                draggingShape.setLayoutX(e.getX());
+                draggingShape.setLayoutY(e.getY());
+                draggingShape.setVisible(true);
             } else {
-                Polygon old = (Polygon) draggingShape;
-                Polygon copy = new Polygon();
-                copy.getPoints().addAll(old.getPoints());
-                copy.setFill(old.getFill());
-                newShape = copy;
+                // 👉 перенос в другое окно
+                sourcePane.getChildren().remove(draggingShape);
+                targetPane.getChildren().add(draggingShape);
+
+                draggingShape.setLayoutX(e.getX());
+                draggingShape.setLayoutY(e.getY());
+                draggingShape.setVisible(true);
             }
-
-            newShape.setLayoutX(e.getX());
-            newShape.setLayoutY(e.getY());
-
-            targetPane.getChildren().add(newShape);
-
-            if (targetPane == mainPane) {
-                addShape(newShape);
-            } else {
-                enableSecondWindow(newShape);
-            }
-
-            ((Pane) draggingShape.getParent()).getChildren().remove(draggingShape);
-            shapes.removeIf(ms -> ms.shape == draggingShape);
 
             e.setDropCompleted(true);
+            draggingShape = null;
             e.consume();
-        });
-    }
-
-    // ===== SECOND WINDOW =====
-
-    private void enableSecondWindow(Shape s) {
-        s.setOnMouseClicked(e -> {
-            if (e.getButton() == MouseButton.PRIMARY) {
-                secondPane.getChildren().remove(s);
-            } else if (e.getButton() == MouseButton.SECONDARY) {
-                s.setFill(randomColor());
-            }
         });
     }
 
